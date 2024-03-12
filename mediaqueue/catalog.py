@@ -18,3 +18,29 @@ def items(db, status=None):
         return [dict(row) for row in db.execute(
             'SELECT * FROM media WHERE status = ? ORDER BY path', (status,))]
     return [dict(row) for row in db.execute('SELECT * FROM media ORDER BY path')]
+
+
+def scan(db, root):
+    from pathlib import Path
+    import hashlib
+    root = Path(root).resolve()
+    if not root.is_dir():
+        raise ValueError('Input must be a directory')
+    supported = {'.wav': 'audio', '.mp3': 'audio', '.flac': 'audio',
+                 '.png': 'image', '.jpg': 'image', '.jpeg': 'image',
+                 '.mp4': 'video', '.mkv': 'video'}
+    count = 0
+    for path in sorted(root.rglob('*')):
+        if path.is_symlink() or not path.is_file() or path.suffix.lower() not in supported:
+            continue
+        digest = hashlib.sha256()
+        with path.open('rb') as stream:
+            for block in iter(lambda: stream.read(1024 * 1024), b''):
+                digest.update(block)
+        db.execute("""INSERT INTO media(path, size, digest, kind) VALUES (?, ?, ?, ?)
+            ON CONFLICT(path) DO UPDATE SET size=excluded.size,
+            digest=excluded.digest, kind=excluded.kind""",
+            (str(path), path.stat().st_size, digest.hexdigest(), supported[path.suffix.lower()]))
+        count += 1
+    db.commit()
+    return count
