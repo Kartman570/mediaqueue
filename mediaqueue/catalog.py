@@ -44,3 +44,19 @@ def scan(db, root):
         count += 1
     db.commit()
     return count
+
+
+def duplicates(db):
+    groups = {}
+    for row in items(db):
+        groups.setdefault(row['digest'], []).append(row['path'])
+    return [paths for paths in groups.values() if len(paths) > 1]
+
+
+def mark(db, item_id, status, tag=''):
+    if status not in {'new', 'reviewed', 'skipped'}:
+        raise ValueError('Unknown status')
+    cursor = db.execute('UPDATE media SET status=?, tag=? WHERE id=?', (status, tag, item_id))
+    if not cursor.rowcount:
+        raise ValueError('Media item not found')
+    db.commit()
