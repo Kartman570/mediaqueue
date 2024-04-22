@@ -3,6 +3,7 @@ import json
 import sys
 from .catalog import connect, items, scan, duplicates, mark
 from .inspect import inspect_file
+from .organize import plan, apply
 
 
 def main():
@@ -20,6 +21,9 @@ def main():
     mark_parser.add_argument('id', type=int)
     mark_parser.add_argument('status', choices=['new', 'reviewed', 'skipped'])
     mark_parser.add_argument('--tag', default='')
+    organize_parser = commands.add_parser('organize')
+    organize_parser.add_argument('destination')
+    organize_parser.add_argument('--apply', action='store_true')
     args = parser.parse_args()
     try:
         with connect(args.db) as db:
@@ -29,6 +33,10 @@ def main():
                 result = inspect_file(args.path)
             elif args.command == 'duplicates':
                 result = duplicates(db)
+            elif args.command == 'organize':
+                result = plan(items(db), args.destination)
+                if args.apply:
+                    result = {'copied': apply(result)}
             elif args.command == 'mark':
                 mark(db, args.id, args.status, args.tag)
                 result = {'updated': args.id}
