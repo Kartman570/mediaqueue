@@ -34,7 +34,13 @@ def apply(entries):
         if digest.hexdigest() != entry['digest']:
             raise ValueError('Source changed since scanning: ' + str(source))
         target.parent.mkdir(parents=True, exist_ok=True)
-        with target.open('xb') as output, source.open('rb') as stream:
-            shutil.copyfileobj(stream, output)
+        with source.open('rb') as stream:
+            output = target.open('xb')
+            try:
+                with output:
+                    shutil.copyfileobj(stream, output)
+            except OSError:
+                target.unlink()
+                raise
         copied.append(str(target))
     return copied
