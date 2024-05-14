@@ -77,3 +77,14 @@ class MediaTests(unittest.TestCase):
         path.write_bytes(b'not an image')
         with self.assertRaises(ValueError):
             inspect_file(path)
+
+    def test_rescanning_changed_content_requires_review(self):
+        source = self.audio()
+        scan(self.db, self.source)
+        mark(self.db, 1, 'reviewed', 'music')
+        scan(self.db, self.source)
+        self.assertEqual(items(self.db)[0]['status'], 'reviewed')
+        source.write_bytes(source.read_bytes() + b'changed')
+        scan(self.db, self.source)
+        self.assertEqual(items(self.db)[0]['status'], 'new')
+        self.assertEqual(plan(items(self.db), self.root / 'sorted'), [])

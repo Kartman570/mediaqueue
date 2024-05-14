@@ -38,8 +38,9 @@ def scan(db, root):
             for block in iter(lambda: stream.read(1024 * 1024), b''):
                 digest.update(block)
         db.execute("""INSERT INTO media(path, size, digest, kind) VALUES (?, ?, ?, ?)
-            ON CONFLICT(path) DO UPDATE SET size=excluded.size,
-            digest=excluded.digest, kind=excluded.kind""",
+            ON CONFLICT(path) DO UPDATE SET
+            status=CASE WHEN digest<>excluded.digest THEN 'new' ELSE status END,
+            size=excluded.size, digest=excluded.digest, kind=excluded.kind""",
             (str(path), path.stat().st_size, digest.hexdigest(), supported[path.suffix.lower()]))
         count += 1
     db.commit()
