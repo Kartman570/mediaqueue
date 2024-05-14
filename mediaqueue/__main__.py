@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+import wave
 from .catalog import connect, items, scan, duplicates, mark
 from .inspect import inspect_file
 from .organize import plan, apply
@@ -43,7 +44,7 @@ def main():
             else:
                 result = items(db, args.status)
         print(json.dumps(result, indent=2))
-    except (ValueError, OSError) as error:
+    except (ValueError, OSError, wave.Error, EOFError) as error:
         print(str(error), file=sys.stderr)
         return 1
     return 0

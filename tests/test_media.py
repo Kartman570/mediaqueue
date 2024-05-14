@@ -88,3 +88,14 @@ class MediaTests(unittest.TestCase):
         scan(self.db, self.source)
         self.assertEqual(items(self.db)[0]['status'], 'new')
         self.assertEqual(plan(items(self.db), self.root / 'sorted'), [])
+
+    def test_cli_reports_corrupt_audio_without_a_traceback(self):
+        import subprocess
+        import sys
+        source = self.source / 'broken.wav'
+        source.write_bytes(b'broken-audio-header')
+        result = subprocess.run([sys.executable, '-m', 'mediaqueue', '--db',
+                                 str(self.root / 'cli.sqlite3'), 'inspect', str(source)],
+                                text=True, capture_output=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertNotIn('Traceback', result.stderr)
